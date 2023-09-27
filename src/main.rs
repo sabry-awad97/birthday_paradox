@@ -36,7 +36,10 @@ fn main() {
     let mut total_matches = 0;
 
     // Run multiple trials
-    for _ in 0..num_trials {
+    for i in 0..num_trials {
+        if i != 0 && i % 10000 == 0 {
+            println!("{} trials run...", i);
+        }
         let birthdays = generate_random_group(group_size);
         if check_for_duplicates(&birthdays) {
             total_matches += 1;
@@ -49,6 +52,7 @@ fn main() {
     let probability = (total_matches as f64 / num_trials as f64) * 100.0;
 
     // Display results
+    println!("{} trials run...", num_trials);
     println!(
         "\nResults after {} trials with a group size of {}:",
         num_trials, group_size
