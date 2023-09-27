@@ -2,16 +2,33 @@ use rand::Rng;
 use std::collections::HashSet;
 use std::time::Instant;
 
-fn generate_random_birthday() -> String {
-    // Generate a random birthday in MM/DD format
-    let month = rand::thread_rng().gen_range(1..=12);
-    let day = rand::thread_rng().gen_range(1..=31);
+fn generate_random_birthday(leap_year: bool) -> String {
+    let mut rng = rand::thread_rng();
+    let month = rng.gen_range(1..=12);
+    let day = match month {
+        2 => {
+            if leap_year {
+                rng.gen_range(1..=29)
+            } else {
+                rng.gen_range(1..=28)
+            }
+        }
+        4 | 6 | 9 | 11 => rng.gen_range(1..=30),
+        _ => rng.gen_range(1..=31),
+    };
+
     format!("{:02}/{:02}", month, day)
 }
 
 fn generate_random_group(size: usize) -> Vec<String> {
     // Generate a group of random birthdays
-    (0..size).map(|_| generate_random_birthday()).collect()
+    let mut rng = rand::thread_rng();
+    let year = rng.gen_range(1900..=2100);
+    let is_leap_year = |year: i32| year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let leap_year = is_leap_year(year);
+    (0..size)
+        .map(|_| generate_random_birthday(leap_year))
+        .collect()
 }
 
 fn check_for_duplicates(birthdays: &[String]) -> bool {
