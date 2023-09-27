@@ -1,4 +1,5 @@
 use rand::Rng;
+use rayon::prelude::*;
 use std::collections::HashSet;
 use std::time::Instant;
 
@@ -27,6 +28,7 @@ fn generate_random_group(size: usize) -> Vec<String> {
     let is_leap_year = |year: i32| year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
     let leap_year = is_leap_year(year);
     (0..size)
+        .into_par_iter()
         .map(|_| generate_random_birthday(leap_year))
         .collect()
 }
@@ -34,12 +36,9 @@ fn generate_random_group(size: usize) -> Vec<String> {
 fn check_for_duplicates(birthdays: &[String]) -> bool {
     // Check if there are any duplicate birthdays in the group
     let mut unique_birthdays = HashSet::new();
-    for birthday in birthdays.iter() {
-        if !unique_birthdays.insert(birthday.clone()) {
-            return true;
-        }
-    }
-    false
+    birthdays
+        .iter()
+        .any(|birthday| !unique_birthdays.insert(birthday.clone()))
 }
 
 fn main() {
@@ -50,18 +49,15 @@ fn main() {
     let num_trials = get_num_trials_from_user();
 
     let start_time = Instant::now();
-    let mut total_matches = 0;
 
     // Run multiple trials
-    for i in 0..num_trials {
-        if i != 0 && i % 10000 == 0 {
-            println!("{} trials run...", i);
-        }
-        let birthdays = generate_random_group(group_size);
-        if check_for_duplicates(&birthdays) {
-            total_matches += 1;
-        }
-    }
+    let total_matches = (0..num_trials)
+        .into_par_iter()
+        .filter(|_| {
+            let birthdays = generate_random_group(group_size);
+            check_for_duplicates(&birthdays)
+        })
+        .count();
 
     let end_time = Instant::now(); // Stop measuring execution time
     let elapsed_time = end_time.duration_since(start_time);
@@ -69,7 +65,6 @@ fn main() {
     let probability = (total_matches as f64 / num_trials as f64) * 100.0;
 
     // Display results
-    println!("{} trials run...", num_trials);
     println!(
         "\nResults after {} trials with a group size of {}:",
         num_trials, group_size
