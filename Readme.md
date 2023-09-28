@@ -28,7 +28,6 @@ Execute the binary and provide inputs when prompted:
 
 Inputs:
 
-- Group size to simulate
 - Number of trials to perform
 
 ### Output

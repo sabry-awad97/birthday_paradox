@@ -1,7 +1,9 @@
+use plotters::prelude::{ChartBuilder, IntoDrawingArea, SVGBackend};
+use plotters::series::LineSeries;
+use plotters::style::{IntoFont, RED};
 use rand::Rng;
 use rayon::prelude::*;
 use std::collections::HashSet;
-use std::time::Instant;
 
 fn generate_random_birthday(leap_year: bool) -> String {
     let mut rng = rand::thread_rng();
@@ -44,55 +46,58 @@ fn check_for_duplicates(birthdays: &[String]) -> bool {
 fn main() {
     println!("Welcome to the Birthday Paradox Checker!");
 
-    // Ask the user for input
-    let group_size = get_group_size_from_user();
     let num_trials = get_num_trials_from_user();
 
-    let start_time = Instant::now();
+    let group_sizes = [23, 30, 50, 70];
 
-    // Run multiple trials
-    let total_matches = (0..num_trials)
-        .into_par_iter()
-        .filter(|_| {
-            let birthdays = generate_random_group(group_size);
-            check_for_duplicates(&birthdays)
+    let prob_data = group_sizes
+        .into_iter()
+        .map(|group_size| {
+            let total_matches = (0..num_trials)
+                .into_par_iter()
+                .filter(|_| {
+                    let birthdays = generate_random_group(group_size);
+                    check_for_duplicates(&birthdays)
+                })
+                .count();
+
+            let probability = (total_matches as f64 / num_trials as f64) * 100.0;
+
+            println!(
+                "For a group size of {}, Probability: {:.2}%",
+                group_size, probability
+            );
+
+            (group_size, probability)
         })
-        .count();
+        .collect::<Vec<_>>();
 
-    let end_time = Instant::now(); // Stop measuring execution time
-    let elapsed_time = end_time.duration_since(start_time);
-
-    let probability = (total_matches as f64 / num_trials as f64) * 100.0;
-
-    // Display results
-    println!(
-        "\nResults after {} trials with a group size of {}:",
-        num_trials, group_size
-    );
-    println!("Total matches found: {}", total_matches);
-    println!(
-        "Probability of at least two people sharing a birthday: {:.2}%",
-        probability
-    );
-    println!("Elapsed time: {:?}", elapsed_time);
+    render_plot(&prob_data);
 }
 
-fn get_group_size_from_user() -> usize {
-    // Prompt the user for the group size and validate the input
-    loop {
-        println!("Enter the size of the group (at least 2): ");
-        let mut input = String::new();
-        std::io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read line");
-        match input.trim().parse() {
-            Ok(size) if size >= 2 => return size,
-            _ => {
-                println!("Please enter a valid group size (at least 2).");
-                continue;
-            }
-        };
-    }
+fn render_plot(data: &[(usize, f64)]) {
+    let root = SVGBackend::new("probability_vs_group_size.svg", (800, 600)).into_drawing_area();
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Probability vs Group Size", ("sans-serif", 30))
+        .x_label_area_size(40)
+        .y_label_area_size(40)
+        .build_cartesian_2d(2..100, 0.0..100.0)
+        .unwrap();
+
+    chart
+        .configure_mesh()
+        .x_desc("Group Size")
+        .y_desc("Probability (%)")
+        .axis_desc_style(("sans-serif", 15).into_font())
+        .draw()
+        .unwrap();
+
+    chart
+        .draw_series(LineSeries::new(
+            data.iter().map(|&(x, y)| (x as i32, y)),
+            &RED,
+        ))
+        .unwrap();
 }
 
 fn get_num_trials_from_user() -> usize {
